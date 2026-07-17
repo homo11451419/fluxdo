@@ -736,6 +736,10 @@ class CookieJarService {
         _headerCookiePriorityScore(candidate, requestHost) -
         _headerCookiePriorityScore(existing, requestHost);
     if (scoreDiff != 0) return scoreDiff;
+
+    // 值更长者优先(同 AppCookieManager):cf_clearance 非分区主站变体恒长于
+    // 分区 pre-clearance,切勿改按 expiresDate——分区那枚过期恒更晚,按 expiry
+    // 选会稳定选中原生发送必被 CF 拒的分区变体。
     return candidate.value.length.compareTo(existing.value.length);
   }
 

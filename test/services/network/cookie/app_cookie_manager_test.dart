@@ -112,6 +112,39 @@ void main() {
       expect(cookieHeader, contains('theme=scoped'));
       expect(cookieHeader, contains('theme=root'));
     });
+
+    test('cf_clearance 双变体选更长(非分区)那枚,不按过期时间', () {
+      // 还原 CF 双发形态:非分区主站 clearance 值更长(575 类)但过期更早;
+      // 分区 pre-clearance 值更短(511 类)但过期更晚。读侧看不到 Partitioned,
+      // 必须按值长度选中「更长=非分区」那枚,而不是过期更晚的分区那枚
+      // (后者 native 发送必被 CF 拒 → 会话内持续 403、重启无解)。
+      final now = DateTime.now();
+      final nonPartitioned = Cookie('cf_clearance', 'x' * 575)
+        ..domain = '.linux.do'
+        ..path = '/'
+        ..secure = true
+        ..httpOnly = true
+        ..expires = now.add(const Duration(hours: 10)); // 过期更早
+      final partitioned = Cookie('cf_clearance', 'y' * 511)
+        ..domain = '.linux.do'
+        ..path = '/'
+        ..secure = true
+        ..httpOnly = true
+        ..expires = now.add(const Duration(days: 30)); // 过期更晚
+
+      for (final cookies in [
+        [nonPartitioned, partitioned],
+        [partitioned, nonPartitioned],
+      ]) {
+        final selected = AppCookieManager.selectCookiesForTest(
+          cookies,
+          Uri.parse('https://linux.do/topics/timings'),
+        );
+        final clearance = selected.where((c) => c.name == 'cf_clearance');
+        expect(clearance, hasLength(1));
+        expect(clearance.first.value.length, 575);
+      }
+    });
   });
 
   group('CookieJarService.buildCookieHeaderForRequest', () {
@@ -131,6 +164,30 @@ void main() {
       expect(header, contains('cf_clearance=cf-token'));
       expect(header, contains('linux_do_cdk_session_id=cdk-token'));
       expect(header, isNot(contains('_t=')));
+    });
+
+    test('cf_clearance 双变体选更长(非分区)那枚,不按过期时间', () {
+      final now = DateTime.now();
+      final nonPartitioned = Cookie('cf_clearance', 'x' * 575)
+        ..domain = '.linux.do'
+        ..path = '/'
+        ..expires = now.add(const Duration(hours: 10));
+      final partitioned = Cookie('cf_clearance', 'y' * 511)
+        ..domain = '.linux.do'
+        ..path = '/'
+        ..expires = now.add(const Duration(days: 30));
+
+      for (final cookies in [
+        [nonPartitioned, partitioned],
+        [partitioned, nonPartitioned],
+      ]) {
+        final header = CookieJarService.buildCookieHeaderForRequest(
+          cookies,
+          Uri.parse('https://linux.do/topics/timings'),
+        );
+        expect(header, contains('x' * 575));
+        expect(header, isNot(contains('y' * 511)));
+      }
     });
   });
 }

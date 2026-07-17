@@ -121,6 +121,12 @@ class AppCookieManager extends Interceptor {
   /// 代表服务器最新轮换的值（如 _t 会话 token）。
   /// domain cookie 来自 syncFromWebView（WKWebView 自动添加 domain），
   /// 可能是旧值。优先 host-only 确保发送服务器最新认可的值。
+  /// 测试用:直接对给定 cookie 列表跑发请求选优,返回最终发送顺序。
+  /// 绕过真实 CookieJar 的落库去重,便于验证 cf_clearance 双变体选优。
+  @visibleForTesting
+  static List<Cookie> selectCookiesForTest(List<Cookie> cookies, Uri uri) =>
+      _selectCookies(cookies, uri);
+
   static List<Cookie> _selectCookies(List<Cookie> cookies, Uri uri) {
     final requestHost = uri.host.toLowerCase();
     final baseHost = CookieJarService.appBaseHost;
@@ -186,6 +192,11 @@ class AppCookieManager extends Interceptor {
     );
     if (domainLengthDiff != 0) return domainLengthDiff;
 
+    // 值更长者优先。CF 双发的 cf_clearance 里非分区主站 clearance(原生可用)
+    // 恒长于 Turnstile 分区 pre-clearance(原生不可用);切勿改按 expiresDate
+    // 决胜——分区那枚由常驻 Turnstile 续期,过期恒更晚,按 expiry 选会稳定选中
+    // 原生发送必被 CF 拒的分区变体。写侧 BoundarySync 以真实 Partitioned 属性
+    // 精确避开分区变体,这里的长度口径是同源兜底。
     final candidateValueLength = candidate.value.length;
     final existingValueLength = existing.value.length;
     return candidateValueLength.compareTo(existingValueLength);
