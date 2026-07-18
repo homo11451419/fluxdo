@@ -1,0 +1,95 @@
+name: Android x64 Package
+
+on:
+  push:
+    branches:
+      - ci/android-x64-92b508a2
+
+permissions:
+  contents: read
+
+env:
+  ANDROID_NDK_VERSION: '27.3.13750724'
+
+jobs:
+  build-android-x64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android/sdk/ndk \
+            /opt/ghc \
+            /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL \
+            /usr/share/swift \
+            /usr/local/share/powershell \
+            /usr/local/share/chromium
+          sudo docker image prune --all --force > /dev/null 2>&1 || true
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core/doh_proxy
+          key: android-x86_64
+
+      - name: Setup Android build environment
+        run: |
+          rustup target add x86_64-linux-android
+          cargo install cargo-ndk --locked
+          sudo apt-get update
+          sudo apt-get install -y cmake
+
+      - name: Setup Android NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'ndk;${{ env.ANDROID_NDK_VERSION }}'
+
+      - name: Configure Android NDK path
+        run: |
+          ndk_path="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}"
+          test -d "${ndk_path}"
+          echo "ANDROID_NDK_HOME=${ndk_path}" >> "${GITHUB_ENV}"
+          echo "ANDROID_NDK_ROOT=${ndk_path}" >> "${GITHUB_ENV}"
+
+      - name: Build Android x64 APK
+        run: |
+          dart tool/flutterw.dart build apk \
+            --release \
+            --target-platform android-x64 \
+            --dart-define=cronetHttpNoPlay=true \
+            --split-debug-info=build/symbols
+          unzip -l build/app/outputs/flutter-apk/app-release.apk | \
+            grep 'lib/x86_64/libdoh_proxy.so'
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            dist/fluxdo-android-x86_64.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluxdo-android-x86_64
+          path: dist/fluxdo-android-x86_64.apk
+          retention-days: 7
+          if-no-files-found: error
