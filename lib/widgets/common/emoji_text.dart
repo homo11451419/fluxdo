@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/emoji_handler.dart';
 import '../../services/discourse_cache_manager.dart';
 import '../../utils/emoji_shortcodes.dart';
+import '../../utils/inline_emoji.dart';
 
 /// 轻量级 Emoji 文本组件
 ///
@@ -30,12 +31,13 @@ class EmojiText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spans = _buildSpans(context);
+    final normalizedText = normalizeInlineEmoji(text);
+    final spans = buildEmojiSpans(context, normalizedText, style);
 
     // 如果没有 emoji，直接返回普通 Text
     if (spans.length == 1 && spans.first is TextSpan) {
       return Text(
-        text,
+        normalizedText,
         style: style,
         maxLines: maxLines,
         overflow: overflow,
@@ -54,10 +56,6 @@ class EmojiText extends StatelessWidget {
     );
   }
 
-  List<InlineSpan> _buildSpans(BuildContext context) {
-    return buildEmojiSpans(context, text, style);
-  }
-
   /// 静态方法：构建包含 emoji 的 spans 列表
   /// 可被其他组件复用
   static List<InlineSpan> buildEmojiSpans(
@@ -66,6 +64,7 @@ class EmojiText extends StatelessWidget {
     TextStyle? style, {
     bool preserveSourceLength = false,
   }) {
+    text = normalizeInlineEmoji(text);
     if (!text.contains(':')) {
       return [TextSpan(text: text)];
     }

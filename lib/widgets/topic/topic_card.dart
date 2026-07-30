@@ -20,6 +20,7 @@ import '../common/icon_glyph_span.dart';
 import '../common/relative_time_text.dart';
 import '../../utils/number_utils.dart';
 import '../common/emoji_text.dart';
+import '../../utils/inline_emoji.dart';
 
 Widget _withDesktopTertiaryTap(Widget child, VoidCallback? onMiddleClick) {
   if (!PlatformUtils.isDesktop || onMiddleClick == null) return child;
@@ -572,7 +573,7 @@ class TopicCard extends ConsumerWidget {
         topic.closed ||
         topic.hasAcceptedAnswer ||
         topic.canHaveAnswer ||
-        topic.title.contains(':');
+        containsInlineEmoji(topic.title);
     if (!needsRichText) {
       return Text(
         topic.title,
@@ -684,7 +685,7 @@ class TopicCard extends ConsumerWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
+                    child: EmojiText(
                       name ?? '',
                       style: senderStyle,
                       maxLines: 1,
@@ -971,7 +972,7 @@ class CompactTopicCard extends ConsumerWidget {
         topic.closed ||
         topic.hasAcceptedAnswer ||
         topic.canHaveAnswer ||
-        topic.title.contains(':');
+        containsInlineEmoji(topic.title);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: _clipCardIfNeeded(
