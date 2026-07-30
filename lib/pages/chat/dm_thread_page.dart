@@ -25,6 +25,7 @@ import '../../providers/core_providers.dart';
 import '../../providers/message_bus/chat_providers.dart';
 import '../../services/toast_service.dart';
 import '../../utils/clipboard_image_native.dart';
+import '../../utils/chat_message_content.dart';
 import '../../utils/fluxdo_render_callbacks.dart';
 import '../../utils/time_utils.dart';
 import '../../widgets/bookmark/bookmark_edit_sheet_launcher.dart';
@@ -1122,8 +1123,8 @@ class _ThreadMessageTileState extends ConsumerState<_ThreadMessageTile> {
     final callbacks = FluxdoRenderCallbacks.generic(
       heroTagNamespace: 'chat_thread_msg_${message.id}',
     );
-    final scheme = widget.scheme;
     final status = message.user?.status;
+    final messageHtml = chatMessageHtml(message);
 
     final row = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1195,17 +1196,16 @@ class _ThreadMessageTileState extends ConsumerState<_ThreadMessageTile> {
                     ],
                   ),
                 if (widget.showHeader) const SizedBox(height: 2),
-                message.isDeleted
-                    ? const Text(
-                        '(消息已删除)',
-                        style: TextStyle(color: Colors.grey),
-                      )
-                    : (message.cooked?.isNotEmpty ?? false)
-                    ? callbacks.render(
-                        cookedHtml: message.cooked!,
-                        compact: true,
-                      )
-                    : Text(message.message ?? ''),
+                if (message.isDeleted)
+                  const Text(
+                    '(消息已删除)',
+                    style: TextStyle(color: Colors.grey),
+                  )
+                else if (messageHtml != null)
+                  callbacks.render(
+                    cookedHtml: messageHtml,
+                    compact: true,
+                  ),
                 // 图片/附件不在 cooked 里,得单独渲染(见 chat_upload_view.dart)
                 if (!message.isDeleted)
                   for (final upload in message.uploads)

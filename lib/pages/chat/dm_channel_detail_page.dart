@@ -28,6 +28,7 @@ import '../../services/discourse_cache_manager.dart';
 import '../../services/emoji_handler.dart';
 import '../../services/toast_service.dart';
 import '../../utils/clipboard_image_native.dart';
+import '../../utils/chat_message_content.dart';
 import '../../utils/fluxdo_render_callbacks.dart';
 import '../../utils/time_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -2032,6 +2033,7 @@ class _ChatMessageBubbleState extends ConsumerState<_ChatMessageBubble> {
     final callbacks = FluxdoRenderCallbacks.generic(
       heroTagNamespace: 'chat_msg_${message.id}',
     );
+    final messageHtml = chatMessageHtml(message);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -2093,12 +2095,8 @@ class _ChatMessageBubbleState extends ConsumerState<_ChatMessageBubble> {
                       ],
                     ),
                   ),
-                if (!message.isDeleted &&
-                    (message.cooked?.isNotEmpty ?? false))
-                  callbacks.render(cookedHtml: message.cooked!, compact: true)
-                else if (!message.isDeleted &&
-                    (message.message?.isNotEmpty ?? false))
-                  Text(message.message!),
+                if (!message.isDeleted && messageHtml != null)
+                  callbacks.render(cookedHtml: messageHtml, compact: true),
                 if (message.isDeleted)
                   Text('(消息已删除)',
                       style: TextStyle(color: scheme.onSurfaceVariant)),
