@@ -57,7 +57,10 @@ Widget buildTopicItem({
       highlightColor: highlightColor,
       categoryMap: categoryMap,
     );
-  } else if (kUsePaintedTopicCard && topWidget == null && middleWidget == null) {
+  } else if (kUsePaintedTopicCard &&
+      !messageStyle &&
+      topWidget == null &&
+      middleWidget == null) {
     // 自绘路径:排版全局缓存 + 单渲染对象。宽度 = 视口(或桌面列宽
     // 上限)- 页边距 24;分类表由调用方传入(未传时不查,分类行缺分
     // 类名 —— 各列表页均已传)
