@@ -639,7 +639,7 @@ class _ReplySheetState extends ConsumerState<ReplySheet> {
     // 使用 FractionallySizedBox 固定 0.95 高度
     // SafeArea(bottom: false)：顶部安全区域由 SafeArea 处理，
     // 底部安全区域由 ChatBottomPanelContainer 内部管理，避免双重底部间距
-    // CallbackShortcuts 包整个弹层:Cmd/Ctrl+Enter 提交(对齐 Discourse
+    // ComposerSubmitShortcut 包整个弹层:Cmd/Ctrl+Enter 提交(对齐 Discourse
     // composer),焦点在标题输入框时同样生效;守卫与发送按钮一致。
     final sheet = SafeArea(
       bottom: false,
@@ -973,12 +973,9 @@ class _ReplySheetState extends ConsumerState<ReplySheet> {
       ),
     );
 
-    return CallbackShortcuts(
-      bindings: {
-        for (final activator in composerSubmitActivators())
-          activator: () {
-            if (!_isSubmitting && !_isLoadingRaw) _submit();
-          },
+    return ComposerSubmitShortcut(
+      onSubmit: () {
+        if (!_isSubmitting && !_isLoadingRaw) _submit();
       },
       child: sheet,
     );
